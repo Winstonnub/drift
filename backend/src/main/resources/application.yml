@@ -1,0 +1,6 @@
+spring: # top level Spring config namespace, application contains drift
+  application:
+    name: drift
+
+server: # tells the embedded web server to listen on port 8080
+  port: 8080
