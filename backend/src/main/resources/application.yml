@@ -2,5 +2,11 @@ spring: # top level Spring config namespace, application contains drift
   application:
     name: drift
 
+  data:
+    mongodb:
+      uri: mongodb://drift:drift@localhost:27017/drift?authSource=admin
+      auto-index-creation: true
+
+
 server: # tells the embedded web server to listen on port 8080
   port: 8080

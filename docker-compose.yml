@@ -1,0 +1,14 @@
+services:
+  mongo:
+    image: mongo:7.0
+    container_name: drift-mongo
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: drift
+      MONGO_INITDB_ROOT_PASSWORD: drift
+    volumes:
+      - drift_mongo_data:/data/db
+
+volumes:
+  drift_mongo_data:

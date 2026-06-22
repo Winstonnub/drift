@@ -23,5 +23,4 @@ class HealthControllerTest {
                 .andExpect(status().isOk()) // Expect HTTP 200 OK status
                 .andExpect(content().json("{\"status\":\"ok\"}")); // Expect JSON response with status "ok"
     }
-
 }
