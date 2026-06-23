@@ -1,8 +1,10 @@
 package com.drift.tracks;
 
+import com.drift.security.CurrentUser;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -20,13 +22,18 @@ public class TrackController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public TrackResponse createTrack(@Valid @RequestBody CreateTrackRequest request) {
-        return trackService.createTrack(request);
+    public TrackResponse createTrack(
+        @AuthenticationPrincipal CurrentUser currentUser,// pulls the authed principal out of Spring Security
+        @Valid @RequestBody CreateTrackRequest request
+    ) {
+        return trackService.createTrack(currentUser.id(), request);
     }
 
-    @GetMapping("/{id}") // Delegate GET /tracks/{id} to trackService.getTrack(id)
-    public TrackResponse getTrack(@PathVariable String id) {
-        return trackService.getTrack(id);
+    @GetMapping("/{id}")
+    public TrackResponse getTrack(
+        @AuthenticationPrincipal CurrentUser currentUser,
+        @PathVariable String id
+    ) {
+        return trackService.getTrack(currentUser.id(), id);
     }
-
 }

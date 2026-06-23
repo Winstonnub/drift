@@ -11,11 +11,9 @@ import java.time.ZonedDateTime;
 import java.util.List;
 import java.util.Set;
 
-@Service // mark this class as a Spring service component, so Spring will create an instance and manage its lifecycle
-@RequiredArgsConstructor // Lombok annotation to generate a constructor with required arguments for final fields
+@Service
+@RequiredArgsConstructor
 public class TrackService {
-
-    private static final String DEV_USER_ID = "dev-user";
 
     private static final Set<Integer> ALLOWED_TARGET_MINUTES = Set.of(2, 5, 10);
 
@@ -23,7 +21,7 @@ public class TrackService {
 
     private final TrackRepository trackRepository;
 
-    public TrackResponse createTrack(CreateTrackRequest request) {
+    public TrackResponse createTrack(String userId, CreateTrackRequest request) {
         validateTargetMinutes(request.targetMinutes());
 
         LocalTime deliveryTime = parseDeliveryTime(request.deliveryTime());
@@ -34,7 +32,7 @@ public class TrackService {
         Instant nextDeliveryAt = calculateNextDeliveryAt(deliveryTime, timezone, now);
 
         Track track = Track.builder()
-            .userId(DEV_USER_ID)
+            .userId(userId)
             .topic(request.topic().trim())
             .targetMinutes(request.targetMinutes())
             .status(TrackStatus.ACTIVE)
@@ -51,9 +49,13 @@ public class TrackService {
         return toResponse(savedTrack);
     }
 
-    public TrackResponse getTrack(String id) {
+    public TrackResponse getTrack(String userId, String id) {
         Track track = trackRepository.findById(id)
             .orElseThrow(() -> new TrackNotFoundException(id));
+
+        if (!track.getUserId().equals(userId)) {
+            throw new TrackNotFoundException(id);
+        }
 
         return toResponse(track);
     }
