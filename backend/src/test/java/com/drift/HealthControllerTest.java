@@ -1,26 +1,36 @@
-package com.drift;// Test lives in com.drift, let it find main DriftApplication
+package com.drift;
 
-import org.junit.jupiter.api.Test; // Import JUnit 5 @Test annotation
-import org.springframework.beans.factory.annotation.Autowired; // Let Spring inject obj in test
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc; // Auto-configure MockMvc instance for testing web layer
-import org.springframework.boot.test.context.SpringBootTest; // Start Spring Application context for the test
-import org.springframework.test.web.servlet.MockMvc; // test without opening real network port
+import com.drift.common.health.HealthController;
+import com.drift.security.JwtAuthenticationFilter;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.context.annotation.ComponentScan;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.context.annotation.FilterType;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@SpringBootTest
-@AutoConfigureMockMvc
+@WebMvcTest(
+    controllers = HealthController.class,
+    excludeFilters = @ComponentScan.Filter(
+        type = FilterType.ASSIGNABLE_TYPE,
+        classes = JwtAuthenticationFilter.class
+    )
+)
+@AutoConfigureMockMvc(addFilters = false)
 class HealthControllerTest {
 
-    @Autowired // Spring injects test HTTP client here
-    private MockMvc mockMvc; // MockMvc allows us to send HTTP requests in tests without starting a server
+    @Autowired
+    private MockMvc mockMvc;
 
     @Test
     void healthEndpointReturnsOk() throws Exception {
-        mockMvc.perform(get("/health")) // Send GET request to /health
-                .andExpect(status().isOk()) // Expect HTTP 200 OK status
-                .andExpect(content().json("{\"status\":\"ok\"}")); // Expect JSON response with status "ok"
+        mockMvc.perform(get("/health"))
+            .andExpect(status().isOk())
+            .andExpect(content().json("{\"status\":\"ok\"}"));
     }
 }
