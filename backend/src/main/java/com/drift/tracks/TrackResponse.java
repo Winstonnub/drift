@@ -23,6 +23,8 @@ public record TrackResponse(
 
     Integer syllabusPointer,
 
+    SyllabusGenerationStatus syllabusGenerationStatus,
+
     Instant createdAt
 
 ) {

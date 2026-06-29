@@ -1,6 +1,9 @@
 package com.drift.tracks;
+import java.util.List;
+
 
 import com.drift.security.CurrentUser;
+import com.drift.syllabus.SyllabusResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -13,20 +16,28 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
-@RestController // JSON HTTP Controller
-@RequestMapping("/tracks") // every endpoint in this class starts with /tracks
-@RequiredArgsConstructor // Lombok creates constructor for trackSerice
+@RestController
+@RequestMapping("/tracks")
+@RequiredArgsConstructor
 public class TrackController {
 
     private final TrackService trackService;
 
     @PostMapping
-    @ResponseStatus(HttpStatus.CREATED)
-    public TrackResponse createTrack(
-        @AuthenticationPrincipal CurrentUser currentUser,// pulls the authed principal out of Spring Security
+    @ResponseStatus(HttpStatus.ACCEPTED)
+    public CreateTrackResponse createTrack(
+        @AuthenticationPrincipal CurrentUser currentUser,
         @Valid @RequestBody CreateTrackRequest request
     ) {
         return trackService.createTrack(currentUser.id(), request);
+    }
+
+
+    @GetMapping
+    public List<TrackResponse> getTracks(
+        @AuthenticationPrincipal CurrentUser currentUser
+    ) {
+        return trackService.getTracks(currentUser.id());
     }
 
     @GetMapping("/{id}")
@@ -36,4 +47,23 @@ public class TrackController {
     ) {
         return trackService.getTrack(currentUser.id(), id);
     }
+
+
+
+    @GetMapping("/{id}/syllabus")
+    public SyllabusResponse getSyllabus(
+        @AuthenticationPrincipal CurrentUser currentUser,
+        @PathVariable String id
+    ) {
+        return trackService.getSyllabus(currentUser.id(), id);
+    }
+
+    @GetMapping("/{id}/syllabus-status")
+    public SyllabusStatusResponse getSyllabusStatus(
+        @AuthenticationPrincipal CurrentUser currentUser,
+        @PathVariable String id
+    ) {
+        return trackService.getSyllabusStatus(currentUser.id(), id);
+    }
+
 }

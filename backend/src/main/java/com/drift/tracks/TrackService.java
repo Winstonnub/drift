@@ -1,5 +1,12 @@
 package com.drift.tracks;
 
+import com.drift.kafka.SyllabusGenerationProducer;
+import com.drift.syllabus.Syllabus;
+import com.drift.syllabus.SyllabusItem;
+import com.drift.syllabus.SyllabusItemResponse;
+import com.drift.syllabus.SyllabusNotFoundException;
+import com.drift.syllabus.SyllabusRepository;
+import com.drift.syllabus.SyllabusResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -9,6 +16,7 @@ import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 @Service
@@ -21,7 +29,11 @@ public class TrackService {
 
     private final TrackRepository trackRepository;
 
-    public TrackResponse createTrack(String userId, CreateTrackRequest request) {
+    private final SyllabusRepository syllabusRepository;
+
+    private final SyllabusGenerationProducer syllabusGenerationProducer;
+
+    public CreateTrackResponse createTrack(String userId, CreateTrackRequest request) {
         validateTargetMinutes(request.targetMinutes());
 
         LocalTime deliveryTime = parseDeliveryTime(request.deliveryTime());
@@ -41,15 +53,48 @@ public class TrackService {
             .channels(channels)
             .nextDeliveryAt(nextDeliveryAt)
             .syllabusPointer(0)
+            .syllabusGenerationStatus(SyllabusGenerationStatus.GENERATING)
             .createdAt(now)
             .build();
 
         Track savedTrack = trackRepository.save(track);
 
-        return toResponse(savedTrack);
+        syllabusGenerationProducer.requestSyllabusGeneration(savedTrack.getId());
+
+        return new CreateTrackResponse(
+            toResponse(savedTrack),
+            toSyllabusStatusResponse(savedTrack)
+        );
     }
 
     public TrackResponse getTrack(String userId, String id) {
+        Track track = findOwnedTrack(userId, id);
+
+        return toResponse(track);
+    }
+
+    public List<TrackResponse> getTracks(String userId) {
+    return trackRepository.findByUserId(userId).stream()
+        .map(this::toResponse)
+        .toList();
+}
+
+    public SyllabusResponse getSyllabus(String userId, String trackId) {
+        Track track = findOwnedTrack(userId, trackId);
+
+        Syllabus syllabus = syllabusRepository.findByTrackId(track.getId())
+            .orElseThrow(() -> new SyllabusNotFoundException(trackId));
+
+        return toSyllabusResponse(syllabus);
+    }
+
+    public SyllabusStatusResponse getSyllabusStatus(String userId, String trackId) {
+        Track track = findOwnedTrack(userId, trackId);
+
+        return toSyllabusStatusResponse(track);
+    }
+
+    private Track findOwnedTrack(String userId, String id) {
         Track track = trackRepository.findById(id)
             .orElseThrow(() -> new TrackNotFoundException(id));
 
@@ -57,7 +102,7 @@ public class TrackService {
             throw new TrackNotFoundException(id);
         }
 
-        return toResponse(track);
+        return track;
     }
 
     private void validateTargetMinutes(Integer targetMinutes) {
@@ -124,7 +169,56 @@ public class TrackService {
             track.getChannels(),
             track.getNextDeliveryAt(),
             track.getSyllabusPointer(),
+            track.getSyllabusGenerationStatus(),
             track.getCreatedAt()
+        );
+    }
+
+    private SyllabusStatusResponse toSyllabusStatusResponse(Track track) {
+        Optional<Syllabus> syllabus = syllabusRepository.findByTrackId(track.getId());
+
+        if (syllabus.isPresent()) {
+            return new SyllabusStatusResponse(
+                track.getId(),
+                SyllabusGenerationStatus.READY,
+                true,
+                syllabus.get().getId()
+            );
+        }
+
+        SyllabusGenerationStatus status = track.getSyllabusGenerationStatus();
+
+        if (status == null) {
+            status = SyllabusGenerationStatus.GENERATING;
+        }
+
+        return new SyllabusStatusResponse(
+            track.getId(),
+            status,
+            false,
+            null
+        );
+    }
+
+    private SyllabusResponse toSyllabusResponse(Syllabus syllabus) {
+        return new SyllabusResponse(
+            syllabus.getId(),
+            syllabus.getTrackId(),
+            syllabus.getItems().stream()
+                .map(this::toSyllabusItemResponse)
+                .toList(),
+            syllabus.getVersion(),
+            syllabus.getGeneratedAt()
+        );
+    }
+
+    private SyllabusItemResponse toSyllabusItemResponse(SyllabusItem item) {
+        return new SyllabusItemResponse(
+            item.getIndex(),
+            item.getTitle(),
+            item.getSummary(),
+            item.getPrerequisites(),
+            item.getStatus()
         );
     }
 

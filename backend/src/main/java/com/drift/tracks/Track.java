@@ -41,6 +41,8 @@ public class Track {
 
     private Integer syllabusPointer; // points to next syllabus item to deliver, 0-based index into syllabus array
 
+    private SyllabusGenerationStatus syllabusGenerationStatus;
+
     private Instant createdAt;
 
 }
