@@ -10,9 +10,9 @@ type Mode = "login" | "register";
 export default function HomePage() {
   const router = useRouter();
   const [mode, setMode] = useState<Mode>("login");
-  const [displayName, setDisplayName] = useState("Winston");
+  const [displayName, setDisplayName] = useState("");
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("password123");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -81,6 +81,9 @@ export default function HomePage() {
                   className="input"
                   value={displayName}
                   onChange={(event) => setDisplayName(event.target.value)}
+                  placeholder="Your name"
+                  autoComplete="name"
+                  required={mode === "register"}
                 />
               </label>
             )}
@@ -93,6 +96,8 @@ export default function HomePage() {
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
                 placeholder="you@example.com"
+                autoComplete="email"
+                required
               />
             </label>
 
@@ -103,6 +108,9 @@ export default function HomePage() {
                 type="password"
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
+                placeholder="Your password"
+                autoComplete={mode === "login" ? "current-password" : "new-password"}
+                required
               />
             </label>
 

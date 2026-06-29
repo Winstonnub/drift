@@ -6,7 +6,8 @@ import type {
   Track,
 } from "./types";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
+const RAW_API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
+const API_URL = RAW_API_URL.replace(/\/+$/, "");
 const TOKEN_KEY = "drift_access_token";
 
 type RequestOptions = {
@@ -36,16 +37,22 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
     headers.Authorization = `Bearer ${options.token}`;
   }
 
-  const response = await fetch(`${API_URL}${path}`, {
-    method: options.method ?? "GET",
-    headers,
-    body: options.body ? JSON.stringify(options.body) : undefined,
-  });
+  let response: Response;
+
+  try {
+    response = await fetch(`${API_URL}${path}`, {
+      method: options.method ?? "GET",
+      headers,
+      body: options.body ? JSON.stringify(options.body) : undefined,
+    });
+  } catch {
+    throw new Error("Could not reach the Drift backend. Please try again in a moment.");
+  }
 
   const text = await response.text();
 
   if (!response.ok) {
-    throw new Error(toFriendlyApiError(response.status, text));
+    throw new Error(toFriendlyApiError(path, response.status, text));
   }
 
   if (!text) {
@@ -55,7 +62,7 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
   return JSON.parse(text) as T;
 }
 
-function toFriendlyApiError(status: number, text: string) {
+function toFriendlyApiError(path: string, status: number, text: string) {
   if (status === 401) {
     return "Invalid email or password.";
   }
@@ -65,6 +72,10 @@ function toFriendlyApiError(status: number, text: string) {
   }
 
   if (status === 404) {
+    if (path.startsWith("/auth/")) {
+      return "Could not reach the login service. Please check the frontend API URL setting.";
+    }
+
     return "We could not find that item.";
   }
 
