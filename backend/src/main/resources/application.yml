@@ -1,0 +1,51 @@
+spring: # top level Spring config namespace, application contains drift
+  application:
+    name: drift
+
+  data:
+    mongodb:
+      uri: mongodb://drift:drift@localhost:27017/drift?authSource=admin
+      auto-index-creation: true
+  kafka:
+    bootstrap-servers: localhost:9092
+
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+
+    consumer:
+      group-id: drift-backend
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: "com.drift.kafka.events"
+
+server: # tells the embedded web server to listen on port 8080
+  port: 8080
+  error:
+    include-stacktrace: never
+    include-message: always
+
+
+app: # app config namespace
+    jwt: 
+        secret: "X1zEPv71V1L4KuBqBZpws9VwrDfnSrKWy5Q7yV8RQGP0b95Sqe8Q8/62lOGRRK9q"
+        access-token-expiration-minutes: 15
+        refresh-token-expiration-days: 30 # longer, since they are used to get new access tokens
+
+    anthropic:
+        base-url: "https://api.anthropic.com"
+        api-key: "${ANTHROPIC_API_KEY:}"
+        version: "2023-06-01"
+        model: "claude-sonnet-4-5"
+        max-tokens: 4096
+
+    resend:
+        base-url: "https://api.resend.com"
+        api-key: "${RESEND_API_KEY:}"
+        from: "Drift <onboarding@resend.dev>"
+        app-url: "http://localhost:3000"
+
+    cors:
+        allowed-origins: "${APP_CORS_ALLOWED_ORIGINS:http://localhost:3000}"

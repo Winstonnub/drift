@@ -1,0 +1,19 @@
+# local secrets
+.env
+.env.*
+!.env.example
+
+# macOS
+.DS_Store
+
+# IDEs
+.idea/
+.vscode/
+
+# logs
+*.log
+
+# load-test generated output
+load-tests/results/
+
+phases/

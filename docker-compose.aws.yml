@@ -1,0 +1,71 @@
+services:
+  caddy:
+    image: caddy:2-alpine
+    container_name: drift-aws-caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DRIFT_API_DOMAIN: ${DRIFT_API_DOMAIN}
+    volumes:
+      - ./ops/Caddyfile:/etc/caddy/Caddyfile:ro
+      - drift_caddy_data:/data
+      - drift_caddy_config:/config
+    depends_on:
+      - backend
+
+  mongo:
+    image: mongo:7.0
+    container_name: drift-aws-mongo
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD}
+    volumes:
+      - drift_mongo_data:/data/db
+
+  kafka:
+    image: apache/kafka:4.3.0
+    container_name: drift-aws-kafka
+    restart: unless-stopped
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_NUM_PARTITIONS: 3
+    volumes:
+      - drift_kafka_data:/var/lib/kafka/data
+
+  backend:
+    build:
+      context: ./backend
+    container_name: drift-aws-backend
+    restart: unless-stopped
+    expose:
+      - "8080"
+    depends_on:
+      - mongo
+      - kafka
+    environment:
+      SPRING_DATA_MONGODB_URI: mongodb://${MONGO_USERNAME}:${MONGO_PASSWORD}@mongo:27017/drift?authSource=admin
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      APP_JWT_SECRET: ${APP_JWT_SECRET}
+      APP_CORS_ALLOWED_ORIGINS: ${APP_CORS_ALLOWED_ORIGINS}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      RESEND_API_KEY: ${RESEND_API_KEY}
+      APP_RESEND_APP_URL: ${APP_RESEND_APP_URL}
+
+volumes:
+  drift_caddy_data:
+  drift_caddy_config:
+  drift_mongo_data:
+  drift_kafka_data:
